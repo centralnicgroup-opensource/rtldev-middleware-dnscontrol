@@ -1,0 +1,10 @@
+version: '3.9'
+
+services:
+  dnscontrol:
+    container_name: dstack-dnscontrol
+    volumes:
+      - ..:/usr/share/rtldev-middleware-dnscontrol:cached
+    build:
+      context: .
+      dockerfile: Dockerfile
