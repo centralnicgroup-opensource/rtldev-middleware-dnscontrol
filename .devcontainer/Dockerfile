@@ -1,5 +1,5 @@
 # [Choice] Alpine version: 3.16, 3.15, 3.14, 3.13 or leave blank for latest
-FROM mcr.microsoft.com/vscode/devcontainers/base:0-alpine
+FROM mcr.microsoft.com/vscode/devcontainers/base:alpine
 
 # ** [Optional] Uncomment this section to install additional packages. **
 # RUN apk update \
