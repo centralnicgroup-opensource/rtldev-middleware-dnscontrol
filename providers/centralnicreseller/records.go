@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/StackExchange/dnscontrol/v4/models"
 	"github.com/StackExchange/dnscontrol/v4/pkg/diff"
@@ -150,11 +149,10 @@ func toRecord(r *CNRRecord, origin string) *models.RecordConfig {
 // }
 
 func (n *CNRClient) updateZoneBy(params map[string]interface{}, domain string) error {
-	zone := domain + "."
+	zone := domain
 	cmd := map[string]interface{}{
-		"COMMAND":   "UpdateDNSZone",
-		"DNSZONE":   zone,
-		"INCSERIAL": "1",
+		"COMMAND": "ModifyDNSZone",
+		"DNSZONE": zone,
 	}
 	for key, val := range params {
 		cmd[key] = val
@@ -213,6 +211,7 @@ func (n *CNRClient) getRecords(domain string) ([]*CNRRecord, error) {
 		recordType := typeColumn[i]
 		content := contentColumn[i]
 		ttlStr := ttlColumn[i]
+		prioColumn := prioColumn[i]
 
 		// Parse the TTL string to an unsigned integer
 		ttl, err := strconv.ParseUint(ttlStr, 10, 32)
@@ -224,7 +223,7 @@ func (n *CNRClient) getRecords(domain string) ([]*CNRRecord, error) {
 		record := &CNRRecord{
 			DomainName: domain,
 			Host:       name,
-			Fqdn:       fmt.Sprintf("%s.", domain),
+			Fqdn:       fmt.Sprintf("%s.%s.", name, domain),
 			Type:       recordType,
 			TTL:        uint32(ttl),
 		}
@@ -232,15 +231,16 @@ func (n *CNRClient) getRecords(domain string) ([]*CNRRecord, error) {
 		// Update FQDN if the host is not "@"
 		if record.Host != "@" {
 			record.Fqdn = fmt.Sprintf("%s.%s", name, record.Fqdn)
+		} else {
+			record.Fqdn = fmt.Sprintf("%s.", name)
 		}
 
 		// Handle MX and SRV records which have priority
 		if recordType == "MX" || recordType == "SRV" {
-			prioStr := prioColumn[i]
-			if prioStr != "" {
-				prio, err := strconv.ParseUint(prioStr, 10, 32)
+			if prioColumn != "" {
+				prio, err := strconv.ParseUint(prioColumn, 10, 32)
 				if err != nil {
-					return nil, fmt.Errorf("invalid priority value for domain %s: %s", domain, prioStr)
+					return nil, fmt.Errorf("invalid priority value for domain %s: %s", domain, prioColumn)
 				}
 				record.Priority = uint32(prio)
 			}

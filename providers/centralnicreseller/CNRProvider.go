@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/StackExchange/dnscontrol/v4/providers"
-	cnrcl "github.com/centralnicgroup-opensource/rtldev-middleware-go-sdk/v3/apiclient"
+	cnrcl "github.com/centralnicgroup-opensource/rtldev-middleware-go-sdk/v4/apiclient"
 )
 
 // GoReleaser: version
