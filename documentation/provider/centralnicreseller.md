@@ -14,7 +14,7 @@ Example:
 {% code title="creds.json" %}
 ```json
 {
-  "cnr": {
+  "CNR": {
     "TYPE": "CNR",
     "apilogin": "your-cnr-account-id",
     "apipassword": "your-cnr-account-password",
@@ -30,7 +30,7 @@ Here a working example for our OT&E System:
 {% code title="creds.json" %}
 ```json
 {
-  "cnr": {
+  "CNR": {
     "TYPE": "CNR",
     "apilogin": "YourUserName",
     "apipassword": "YourPassword",
@@ -69,8 +69,8 @@ You are free to decide if you want to use both of our provider technology or jus
 
 {% code title="dnsconfig.js" %}
 ```javascript
-var REG_CNR = NewRegistrar("cnr");
-var DSP_CNR = NewDnsProvider("cnr");
+var REG_CNR = NewRegistrar("CNR");
+var DSP_CNR = NewDnsProvider("CNR");
 
 // Set Default TTL for all RR to reflect our Backend API Default
 // If you use additional DNS Providers, configure a default TTL

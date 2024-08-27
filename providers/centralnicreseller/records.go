@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/StackExchange/dnscontrol/v4/models"
 	"github.com/StackExchange/dnscontrol/v4/pkg/diff"
@@ -165,6 +166,7 @@ func (n *CNRClient) updateZoneBy(params map[string]interface{}, domain string) e
 	return nil
 }
 
+// deleteRecordString constructs the record string based on the provided CNRRecord.
 func (n *CNRClient) getRecords(domain string) ([]*CNRRecord, error) {
 	var records []*CNRRecord
 	zone := domain
@@ -211,7 +213,7 @@ func (n *CNRClient) getRecords(domain string) ([]*CNRRecord, error) {
 		recordType := typeColumn[i]
 		content := contentColumn[i]
 		ttlStr := ttlColumn[i]
-		prioColumn := prioColumn[i]
+		prioStr := prioColumn[i]
 
 		// Parse the TTL string to an unsigned integer
 		ttl, err := strconv.ParseUint(ttlStr, 10, 32)
@@ -219,35 +221,37 @@ func (n *CNRClient) getRecords(domain string) ([]*CNRRecord, error) {
 			return nil, fmt.Errorf("invalid TTL value for domain %s: %s", domain, ttlStr)
 		}
 
+		// Parse the TTL string to an unsigned integer
+		priority, _ := strconv.ParseUint(prioStr, 10, 32)
+
 		// Initialize a new CNRRecord
 		record := &CNRRecord{
 			DomainName: domain,
 			Host:       name,
-			Fqdn:       fmt.Sprintf("%s.%s.", name, domain),
+			Fqdn:       name, // Start with the host
 			Type:       recordType,
 			TTL:        uint32(ttl),
+			Priority:   uint32(priority),
 		}
 
-		// Update FQDN if the host is not "@"
-		if record.Host != "@" {
-			record.Fqdn = fmt.Sprintf("%s.%s", name, record.Fqdn)
-		} else {
-			record.Fqdn = fmt.Sprintf("%s.", name)
+		// Only append domain if it's not already a fully qualified domain name
+		if !strings.HasSuffix(record.Fqdn, domain+".") {
+			record.Fqdn = fmt.Sprintf("%s.%s.", name, domain)
 		}
+
+		record.Answer = content
 
 		// Handle MX and SRV records which have priority
-		if recordType == "MX" || recordType == "SRV" {
-			if prioColumn != "" {
-				prio, err := strconv.ParseUint(prioColumn, 10, 32)
-				if err != nil {
-					return nil, fmt.Errorf("invalid priority value for domain %s: %s", domain, prioColumn)
-				}
-				record.Priority = uint32(prio)
+		if content == prioStr {
+			continue
+		}
+
+		// Handle MX records
+		if (recordType == "MX") && strings.HasPrefix(content, prioStr) {
+			content = strings.TrimPrefix(content, prioStr)
+			if len(content) > 0 && content[0] == ' ' {
+				record.Answer = content[1:]
 			}
-			record.Answer = content
-		} else {
-			// For other record types, the answer is just the content
-			record.Answer = content
 		}
 
 		// Append the record to the records slice
@@ -267,6 +271,7 @@ func (n *CNRClient) createRecordString(rc *models.RecordConfig, domain string) (
 		TTL:        rc.TTL,
 		Priority:   uint32(rc.MxPreference),
 	}
+
 	switch rc.Type { // #rtype_variations
 	case "A", "AAAA", "ANAME", "CNAME", "MX", "NS", "PTR":
 		// nothing
@@ -289,7 +294,9 @@ func (n *CNRClient) createRecordString(rc *models.RecordConfig, domain string) (
 	}
 
 	str := record.Host + " " + fmt.Sprint(record.TTL) + " IN " + record.Type + " "
-	if record.Type == "MX" || record.Type == "SRV" {
+	// Handle MX records which have priority
+	// if SRV handling required?
+	if record.Type == "MX" {
 		str += fmt.Sprint(record.Priority) + " "
 	}
 	str += record.Answer
@@ -298,15 +305,20 @@ func (n *CNRClient) createRecordString(rc *models.RecordConfig, domain string) (
 
 // deleteRecordString constructs the record string based on the provided CNRRecord.
 func (n *CNRClient) deleteRecordString(record *CNRRecord) string {
-	values := []interface{}{
+	// Initialize values slice
+	values := []string{
 		record.Host,
-		record.TTL,
+		fmt.Sprintf("%v", record.TTL),
 		"IN",
 		record.Type,
 		record.Answer,
 	}
+
+	// Remove TTL if the record type is "NS"
 	if record.Type == "NS" {
-		values = append(values[:2], values[3:]...)
+		values = append(values[:2], values[3:]...) // Skip over the "TTL" and "IN"
 	}
-	return fmt.Sprintf("%v %v %v %v %v", values...)
+
+	// Return the final string by joining the elements with spaces
+	return strings.Join(values, " ")
 }
