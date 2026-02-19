@@ -42,7 +42,6 @@ Currently supported DNS providers:
 - Gidinet
 - Google DNS
 - Hetzner
-- HEXONET
 - hosting.de
 - Huawei Cloud DNS
 - Hurricane Electric DNS
@@ -83,7 +82,6 @@ Currently supported Domain Registrars:
 - easyname
 - Gandi
 - Gidinet
-- HEXONET
 - hosting.de
 - Internet.bs
 - INWX
